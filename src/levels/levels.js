@@ -7,6 +7,7 @@
 //              eraseTime (optional) seconds of scribbling needed
 //  boxes     : pushable crates (dynamic physics bodies)
 //  switches  : pressure plates { x, y, w } — y is the plate's top; only boxes are heavy enough
+//  spikes    : hazards { x, y, w } — y is the floor line the spikes stand on; touching one sends you back to spawn
 //  exit      : { x: centre, y: floor line, locked?: true } — locked doors open once every switch is pressed
 //  hints     : handwritten notes drawn on the page
 //
@@ -60,6 +61,38 @@ export const LEVELS = [
       { x: 520, y: 400, text: 'the plate needs\nsomething heavy', angle: 2, color: '#5b6070' },
       { x: 860, y: 215, text: 'locked until\nthe plate is pressed', angle: -2, color: '#5b6070' },
       { x: 150, y: 330, text: 'stuck? press R', angle: -3, color: '#5b6070' },
+    ],
+  },
+  {
+    name: 'Level 3 · Ink Budget',
+    spawn: { x: 50, y: 330 },
+    stability: 100,
+    platforms: [
+      { x: 0, y: 380, w: 200, h: 160 }, // start ledge
+      { x: 200, y: 480, w: 400, h: 60 }, // floor of the spike pit (100px deep: jump-out-able)
+      { x: 225, y: 400, w: 60, h: 16 }, // stepping stones across the pit
+      { x: 345, y: 370, w: 60, h: 16 },
+      { x: 505, y: 345, w: 60, h: 16 },
+      { x: 600, y: 380, w: 360, h: 160 }, // far ledge with the door
+    ],
+    erasables: [
+      { id: 'shelf', x: 415, y: 200, w: 80, h: 16, cost: 30, eraseTime: 0.9 }, // holds the box up
+      { id: 'wall', x: 600, y: 200, w: 40, h: 180, cost: 45, eraseTime: 1.2 }, // blocks the far ledge
+      { id: 'decoy-a', x: 760, y: 280, w: 100, h: 18, cost: 30, eraseTime: 0.8 },
+      { id: 'decoy-b', x: 60, y: 250, w: 100, h: 18, cost: 30, eraseTime: 0.8 },
+    ],
+    boxes: [{ x: 433, y: 156, w: 44, h: 44 }],
+    switches: [{ x: 425, y: 472, w: 60 }],
+    spikes: [
+      { x: 300, y: 480, w: 120 }, // pit, left patch
+      { x: 490, y: 480, w: 72 }, // pit, right patch
+      { x: 690, y: 380, w: 60 }, // on the far ledge, before the door
+    ],
+    exit: { x: 880, y: 380, locked: true },
+    hints: [
+      { x: 330, y: 150, text: 'drop the box on the plate', angle: -2, color: '#d8262f' },
+      { x: 620, y: 150, text: 'spend ink wisely —\nyou can\'t erase everything', angle: 2, color: '#5b6070' },
+      { x: 450, y: 440, text: 'spikes!', angle: -3, color: '#5b6070' },
     ],
   },
 ];

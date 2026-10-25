@@ -21,6 +21,8 @@ export default class GameScene extends Phaser.Scene {
     this.fontFamily = FONT;
     this.panel = null;
     this.shakeAt = 0;
+    this.deaths = 0;
+    this.invulnUntil = 0;
   }
 
   create() {
@@ -116,6 +118,35 @@ export default class GameScene extends Phaser.Scene {
       this.switches.push({ rect: new Phaser.Geom.Rectangle(sw.x, sw.y, sw.w, 8), img, pressed: false });
     });
 
+    // spikes: not solid, but touching one sends the doodle back to the start
+    this.spikeRects = [];
+    (L.spikes ?? []).forEach((sp, i) => {
+      const key = `spikes-${li}-${i}`;
+      makeTexture(this, key, sp.w, 18, (g) => {
+        const r = rng(40 + i);
+        const n = Math.max(1, Math.round(sp.w / 18));
+        const tw = sp.w / n;
+        for (let k = 0; k < n; k++) {
+          const x0 = k * tw, x1 = x0 + tw, xm = (x0 + x1) / 2;
+          g.fillStyle(0xf1e6c8, 1);
+          g.beginPath();
+          g.moveTo(x0 + 1, 17);
+          g.lineTo(xm, 2);
+          g.lineTo(x1 - 1, 17);
+          g.closePath();
+          g.fillPath();
+          g.lineStyle(2.4, COLORS.ink, 1);
+          wobbleLine(g, x0 + 1, 17, xm, 2, r, 0.6);
+          wobbleLine(g, xm, 2, x1 - 1, 17, r, 0.6);
+        }
+        g.lineStyle(2.4, COLORS.ink, 1);
+        wobbleLine(g, 0, 17, sp.w, 17, r, 0.5);
+      });
+      this.add.image(sp.x, sp.y, key).setOrigin(0, 1).setDepth(4);
+      // forgiving hitbox: a bit narrower and shorter than the drawing
+      this.spikeRects.push(new Phaser.Geom.Rectangle(sp.x + 3, sp.y - 13, sp.w - 6, 12));
+    });
+
     const ex = L.exit;
     this.door = this.add.image(ex.x, ex.y, 'door').setOrigin(0.5, 1).setDepth(3);
     this.exitRect = new Phaser.Geom.Rectangle(ex.x - 18, ex.y - 56, 36, 56);
@@ -154,9 +185,20 @@ export default class GameScene extends Phaser.Scene {
     if (hasNext) buttons.push({ label: 'Next level', primary: true, onClick: () => this.scene.restart({ level: this.levelIndex + 1 }) });
     this.panel = showPanel(this, {
       title: 'Sketch complete!',
-      subtitle: `Time ${secs}s  ·  Ink left ${left}%`,
+      subtitle: `Time ${secs}s  ·  Ink left ${left}%` + (this.deaths ? `\nOops count: ${this.deaths}` : ''),
       buttons,
     });
+  }
+
+  // Hazard or fall: back to the start. Erased objects stay erased (restart with R for a clean page).
+  killPlayer(time) {
+    const s = this.player.sprite;
+    this.deaths++;
+    this.inkFx.emitParticleAt(s.x, s.y, 18);
+    this.cameras.main.shake(140, 0.006);
+    sfx.hurt();
+    this.player.respawn(this.level.spawn.x, this.level.spawn.y);
+    this.invulnUntil = time + 500;
   }
 
   gameOver() {
@@ -184,10 +226,9 @@ export default class GameScene extends Phaser.Scene {
     this.player.update(time, delta);
 
     const s = this.player.sprite;
-    if (s.y > PHYSICS.fallDeathY) {
-      this.player.respawn(this.level.spawn.x, this.level.spawn.y); // fell off the page
-      this.cameras.main.flash(120, 244, 236, 216);
-    }
+    const pb = s.body;
+    const onSpikes = this.spikeRects.some((r) => pb.x < r.right && pb.right > r.x && pb.y < r.bottom && pb.bottom > r.y);
+    if (s.y > PHYSICS.fallDeathY || (onSpikes && time > this.invulnUntil)) this.killPlayer(time);
 
     this.updateSwitches();
 

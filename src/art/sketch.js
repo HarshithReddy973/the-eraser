@@ -91,5 +91,3 @@ export function sketchRect(g, x, y, w, h, { seed = 1, fill = COLORS.paper, ink =
     wobbleLine(g, l, b + o, l, t - o, rand, jitter);
   }
 }
-
-

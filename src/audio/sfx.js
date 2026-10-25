@@ -56,6 +56,7 @@ export const sfx = {
   scratch: () => noise(0.07, { vol: 0.05, freq: 2200 + Math.random() * 1200 }),
   pop: () => { tone(520, 0.18, { type: 'triangle', slide: -380, vol: 0.08 }); noise(0.15, { vol: 0.05, freq: 1400 }); },
   click: () => tone(700, 0.08, { type: 'square', slide: 200, vol: 0.04 }),
+  hurt: () => { tone(260, 0.22, { type: 'sawtooth', slide: -180, vol: 0.05 }); noise(0.12, { vol: 0.05, freq: 900 }); },
   deny: () => tone(150, 0.12, { type: 'square', slide: -40, vol: 0.04 }),
   win: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.22, { type: 'triangle', delay: i * 0.1, vol: 0.07 })),
   lose: () => [392, 330, 262, 196].forEach((f, i) => tone(f, 0.28, { type: 'sawtooth', delay: i * 0.14, vol: 0.04 })),
