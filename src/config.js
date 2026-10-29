@@ -12,7 +12,8 @@ export const COLORS = {
   warn: 0xc9731d,
 };
 
-export const FONT = '"Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS",cursive';
+// Patrick Hand is bundled via @fontsource (no network needed); the rest are fallbacks for glyphs it lacks.
+export const FONT = '"Patrick Hand","Segoe Print","Bradley Hand","Chalkboard SE","Comic Sans MS",cursive';
 
 export const PHYSICS = {
   gravity: 1300,

@@ -44,7 +44,7 @@ export function createHud(scene, level, { onRestart, onPause }) {
   const pause = createButton(scene, 742, HUD_H / 2, 'Pause (Esc)', onPause, { w: 138, h: 34, size: 18, depth: D + 2 });
   const restart = createButton(scene, 884, HUD_H / 2, 'Restart (R)', onRestart, { w: 130, h: 34, size: 18, depth: D + 2 });
 
-  scene.add.text(GAME_W / 2, GAME_H - 14, 'A/D move  ·  Space jump  ·  hold left mouse & drag to erase  ·  R restart  ·  Esc pause', {
+  scene.add.text(GAME_W / 2, GAME_H - 14, 'A/D move  ·  Space jump  ·  hold left mouse & drag to erase  ·  R restart  ·  Esc pause  ·  M mute', {
     fontFamily: FONT, fontSize: '15px', color: '#5b6070',
   }).setOrigin(0.5).setDepth(D);
 
@@ -147,4 +147,12 @@ export function showHowTo(scene, { onClose }) {
   scene.tweens.add({ targets: dim, alpha: 1, duration: 200 });
 
   return { destroy() { dim.destroy(); parts.forEach((o) => o.destroy()); ok.destroy(); } };
+}
+
+/** A short message under the HUD (e.g. "Sound off"). */
+export function toast(scene, text) {
+  const t = scene.add.text(GAME_W / 2, HUD_H + 26, text, {
+    fontFamily: FONT, fontSize: '20px', color: css(COLORS.ink), backgroundColor: '#f4ecd8', padding: { x: 14, y: 5 },
+  }).setOrigin(0.5).setDepth(120);
+  scene.tweens.add({ targets: t, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() });
 }

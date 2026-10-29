@@ -19,6 +19,7 @@ export function ensureTextures(scene) {
   createDoor(scene);
   createDot(scene);
   createEraser(scene);
+  createCracks(scene);
   createVignette(scene);
 }
 
@@ -77,6 +78,29 @@ function createPaper(scene) {
     c.strokeStyle = 'rgba(90,70,40,0.25)';
     c.stroke();
   });
+  // pencil doodles in the margins, like someone got bored in class
+  c.strokeStyle = 'rgba(90,80,70,0.28)';
+  c.lineWidth = 1.6;
+  c.beginPath(); // star
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 5 : 12;
+    c.lineTo(34 + Math.cos(a) * r, 192 + Math.sin(a) * r);
+  }
+  c.closePath(); c.stroke();
+  c.beginPath(); // spiral
+  for (let i = 0; i < 60; i++) c.lineTo(34 + Math.cos(i / 4) * (i / 6), 352 + Math.sin(i / 4) * (i / 6));
+  c.stroke();
+  c.beginPath(); // zigzag
+  [[22, 500], [30, 488], [38, 500], [46, 488]].forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+  c.stroke();
+  c.beginPath(); // little sun, top right
+  c.arc(884, 104, 14, 0, Math.PI * 2);
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4;
+    c.moveTo(884 + Math.cos(a) * 19, 104 + Math.sin(a) * 19);
+    c.lineTo(884 + Math.cos(a) * 28, 104 + Math.sin(a) * 28);
+  }
+  c.stroke();
   // darker page edges
   const edge = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, W * 0.65);
   edge.addColorStop(0, 'rgba(120,90,40,0)');
@@ -86,49 +110,114 @@ function createPaper(scene) {
   t.refresh();
 }
 
-function createDoodle(scene) {
-  makeTexture(scene, 'doodle', 28, 36, (g) => {
-    const rand = rng(7);
-    g.lineStyle(2.4, INK, 1);
-    wobbleLine(g, 11, 27, 9, 34, rand, 0.5); // legs
-    wobbleLine(g, 17, 27, 19, 34, rand, 0.5);
-    wobbleLine(g, 6, 34.5, 10.5, 34.5, rand, 0.4); // feet
-    wobbleLine(g, 17.5, 34.5, 22, 34.5, rand, 0.4);
-    wobbleCircle(g, 14, 16, 11, rand, { fill: 0xfffaf0, ink: INK, width: 2.4 }); // blob body
-    g.fillStyle(INK, 1); // eyes, looking right (sprite is flipped to face left)
+function drawDoodle(g, blink) {
+  const rand = rng(7);
+  g.lineStyle(2.4, INK, 1);
+  wobbleLine(g, 11, 27, 9, 34, rand, 0.5); // legs
+  wobbleLine(g, 17, 27, 19, 34, rand, 0.5);
+  wobbleLine(g, 6, 34.5, 10.5, 34.5, rand, 0.4); // feet
+  wobbleLine(g, 17.5, 34.5, 22, 34.5, rand, 0.4);
+  wobbleCircle(g, 14, 16, 11, rand, { fill: 0xfffaf0, ink: INK, width: 2.4 }); // blob body
+  if (blink) {
+    g.lineStyle(2, INK, 1);
+    g.lineBetween(10, 15, 14, 15);
+    g.lineBetween(17, 15, 21, 15);
+  } else {
+    g.fillStyle(INK, 1); // eyes, looking right (the sprite is flipped to face left)
     g.fillCircle(12, 15, 1.9);
     g.fillCircle(19, 15, 1.9);
-    g.lineStyle(1.8, INK, 1);
-    wobbleLine(g, 13, 21, 16, 22.4, rand, 0.3); // mouth
-    wobbleLine(g, 13, 5.5, 11, 1.8, rand, 0.3); // hair tuft
-    wobbleLine(g, 15, 5.2, 17.5, 1.8, rand, 0.3);
-  });
+  }
+  g.fillStyle(0xf09a9a, 0.55); // little cheeks
+  g.fillCircle(8.5, 19.5, 2.2);
+  g.fillCircle(22, 19.5, 2.2);
+  g.lineStyle(1.8, INK, 1);
+  wobbleLine(g, 13, 21, 16, 22.4, rand, 0.3); // mouth
+  wobbleLine(g, 13, 5.5, 11, 1.8, rand, 0.3); // hair tuft
+  wobbleLine(g, 15, 5.2, 17.5, 1.8, rand, 0.3);
 }
 
+function createDoodle(scene) {
+  makeTexture(scene, 'doodle', 28, 36, (g) => drawDoodle(g, false));
+  makeTexture(scene, 'doodle-blink', 28, 36, (g) => drawDoodle(g, true));
+}
+
+// 'door' = open for business, 'door-locked' = greyed out with a padlock.
 function createDoor(scene) {
-  makeTexture(scene, 'door', 48, 64, (g) => {
-    const rand = rng(21);
-    const pts = [[4, 63], [4, 26]];
-    for (let i = 1; i < 16; i++) {
-      const a = Math.PI + (Math.PI * i) / 16;
-      pts.push([24 + Math.cos(a) * 20, 26 + Math.sin(a) * 20]);
+  [['door', false], ['door-locked', true]].forEach(([key, locked]) =>
+    makeTexture(scene, key, 48, 64, (g) => {
+      const rand = rng(21);
+      const pts = [[4, 63], [4, 26]];
+      for (let i = 1; i < 16; i++) {
+        const a = Math.PI + (Math.PI * i) / 16;
+        pts.push([24 + Math.cos(a) * 20, 26 + Math.sin(a) * 20]);
+      }
+      pts.push([44, 26], [44, 63]);
+      g.fillStyle(locked ? 0xd6d0c0 : 0xfff3cf, 1);
+      g.beginPath();
+      pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(3, INK, 1);
+      g.strokePath();
+      g.lineStyle(1.4, 0x6b6558, 0.45); // plank lines
+      wobbleLine(g, 16, 10, 16, 62, rand, 0.5);
+      wobbleLine(g, 32, 10, 32, 62, rand, 0.5);
+      if (locked) {
+        g.fillStyle(COLORS.red, 1); // padlock
+        g.fillRect(17, 38, 14, 12);
+        g.lineStyle(2, INK, 1);
+        g.strokeRect(17, 38, 14, 12);
+        g.beginPath();
+        g.moveTo(20, 38); g.lineTo(20, 32); g.lineTo(24, 28); g.lineTo(28, 32); g.lineTo(28, 38);
+        g.strokePath();
+        g.fillStyle(INK, 1);
+        g.fillCircle(24, 43.5, 1.8);
+      } else {
+        g.fillStyle(COLORS.red, 1); // knob
+        g.fillCircle(37, 42, 3.4);
+        g.lineStyle(1.5, INK, 1);
+        g.strokeCircle(37, 42, 3.4);
+      }
+    })
+  );
+}
+
+// Cracks creeping in from the page edges; the game fades them in as Ink Stability drops.
+function createCracks(scene) {
+  if (scene.textures.exists('cracks')) return;
+  const t = scene.textures.createCanvas('cracks', W, H);
+  const c = t.getContext();
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  const starts = [[0, 90], [0, 400], [W, 60], [W, 330], [300, 0], [660, 0], [200, H], [760, H], [W / 2, H]];
+  starts.forEach(([sx, sy]) => {
+    let x = sx, y = sy;
+    const toward = Math.atan2(H / 2 - sy, W / 2 - sx);
+    c.strokeStyle = 'rgba(70,35,25,0.75)';
+    c.lineWidth = 2.2;
+    c.beginPath();
+    c.moveTo(x, y);
+    for (let i = 0; i < 9; i++) {
+      const a = toward + (Math.random() - 0.5) * 1.1;
+      x += Math.cos(a) * (22 + Math.random() * 34);
+      y += Math.sin(a) * (22 + Math.random() * 34);
+      c.lineTo(x, y);
     }
-    pts.push([44, 26], [44, 63]);
-    g.fillStyle(0xfff3cf, 1);
-    g.beginPath();
-    pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-    g.closePath();
-    g.fillPath();
-    g.lineStyle(3, INK, 1);
-    g.strokePath();
-    g.lineStyle(1.4, 0x6b6558, 0.45); // plank lines
-    wobbleLine(g, 16, 10, 16, 62, rand, 0.5);
-    wobbleLine(g, 32, 10, 32, 62, rand, 0.5);
-    g.fillStyle(COLORS.red, 1); // knob
-    g.fillCircle(37, 42, 3.4);
-    g.lineStyle(1.5, INK, 1);
-    g.strokeCircle(37, 42, 3.4);
+    c.stroke();
+    // a few side branches
+    let bx = sx, by = sy;
+    for (let i = 0; i < 3; i++) {
+      const a = toward + (Math.random() - 0.5) * 2;
+      bx += Math.cos(toward) * (40 + Math.random() * 40);
+      by += Math.sin(toward) * (40 + Math.random() * 40);
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(bx, by);
+      c.lineTo(bx + Math.cos(a) * 28, by + Math.sin(a) * 28);
+      c.stroke();
+    }
   });
+  t.refresh();
 }
 
 function createDot(scene) {

@@ -10,6 +10,14 @@ Built with **Phaser 3** (Arcade Physics), **Vite** and plain JavaScript. No back
 
 ## Status
 
+| Day | Scope | State |
+|---|---|---|
+| 1–2 | Project setup, player, eraser, ink stability, prototype level | Done |
+| 3 | Box, pressure plate, locked door, spikes, Levels 2 and 3 as data | Done |
+| 4 | Start screen, pause menu, How to Play, level-complete / final screens | Done |
+| 5 | Art pass: bundled handwriting font, animated doodle, eraser cursor, hazards, cracks | Done |
+| 6 | Juice: particles, low-ink warnings, synthesized sound, mute | Done |
+| 7–8 | Balancing, save data, full playtest, deploy | Planned |
 
 The game boots into the title screen. Three levels are playable, followed by a final completion screen.
 
@@ -39,6 +47,7 @@ npm run preview    # serve the built dist/ locally
 | Erase | Hold **left mouse button** and drag over pencil objects |
 | Restart level | `R` or the Restart button |
 | Pause / resume | `Esc` or the Pause button |
+| Mute / unmute | `M` (remembered between visits) |
 | Jump to level (testing) | `1`, `2`, `3` |
 
 ---
@@ -59,6 +68,8 @@ npm run preview    # serve the built dist/ locally
 | 30–60% | orange meter, faint red vignette, light shake |
 | below 30% | red meter, pulsing vignette, stronger shake (blinks under 15%) |
 | 0% | game over |
+
+Below 45% cracks also creep in from the page edges, and below 30% the camera slowly wobbles with a heartbeat thump.
 
 Each level's total erasable cost is deliberately above 100, so you can run out of ink — you must plan, not just erase everything.
 
@@ -94,7 +105,7 @@ src/
   ui/ui.js                HUD, sketchy buttons, pause/win/lose panels, How to Play
   art/sketch.js           Wobbly-line helpers (sketchRect, wobbleCircle, ...)
   art/textures.js         Paper, doodle, door, particle and vignette textures
-  audio/sfx.js            Synthesized WebAudio sound effects
+  audio/sfx.js            Synthesized WebAudio sound effects, master volume and mute
 ```
 
 ---
@@ -147,13 +158,7 @@ Everything that affects feel is in `src/config.js`:
 - **Physics:** Arcade Physics. Solids and erasables share one static group; destroying an erasable's sprite removes its body. Boxes are dynamic bodies with high horizontal drag so they feel heavy.
 - **Art:** Platforms, the doodle, door, spikes, boxes and paper are drawn procedurally with seeded jitter, so every shape looks hand-drawn but is identical on every restart. Textures are cached by key.
 - **Audio:** Sound is synthesized with WebAudio; browsers start it on the first click or key press.
-- **Fonts:** Uses a system handwriting stack (`Segoe Print`, `Bradley Hand`, `Comic Sans MS`...), so the look varies by OS.
+- **Fonts:** *Patrick Hand* is bundled through `@fontsource/patrick-hand` (Open Font License), so the look is identical everywhere. The game waits for it to load before starting. A few arrow glyphs fall back to a system font.
+- **Doodle animation:** The physics body is an invisible sprite that is never scaled; a separate visual image follows it and gets squash and stretch, lean, breathing, blinking and dust puffs.
 
 ---
-
-## Known gaps / roadmap
-
-- Best time and best remaining ink saved to `localStorage` (Day 7).
-- Art polish, more particles, and bundled handwriting font (Day 5–6).
-- Possible later: respawn for a box that leaves the page, more levels, gamepad or touch support.
-

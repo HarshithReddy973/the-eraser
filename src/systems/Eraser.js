@@ -24,6 +24,8 @@ export default class Eraser {
     this.items = [];
     this.drawing = false; // true only if the press started inside the play area
     this.cursor = scene.add.graphics().setDepth(60);
+    // the actual red eraser, held at the edge of the brush circle
+    this.icon = scene.add.image(0, 0, 'eraser-big').setScale(0.6).setDepth(61).setVisible(false);
     this.lastFx = 0;
     this.lastScratch = 0;
     this.lastDeny = 0;
@@ -45,7 +47,7 @@ export default class Eraser {
     const overUI = sc.isOverUI(p);
     sc.game.canvas.style.cursor = overUI ? 'default' : 'none';
     this.cursor.clear();
-    if (overUI || sc.state !== 'playing') return;
+    if (overUI || sc.state !== 'playing') { this.icon.setVisible(false); return; }
 
     const { x: wx, y: wy } = p;
     const pl = sc.player.sprite;
@@ -133,6 +135,16 @@ export default class Eraser {
     g.lineStyle(2.5, col, inReach ? 1 : 0.5).strokeCircle(cx, y, r);
     g.lineStyle(1.2, col, 0.4).strokeCircle(cx + 1.2, y - 1, r - 3); // second loose stroke
 
+    // eraser icon: wiggles while rubbing, shudders when denied
+    const wiggle = status === 'erasing' ? Math.sin(time / 35) * 14 : denied ? (Math.random() - 0.5) * 8 : 0;
+    this.icon
+      .setVisible(true)
+      .setPosition(cx + 30, y - 24)
+      .setAngle(-35 + wiggle)
+      .setScale(status === 'idle' ? 0.6 : 0.54)
+      .setTint(denied ? 0x9a9aa5 : 0xffffff)
+      .setAlpha(inReach ? 1 : 0.6);
+
     if (denied) {
       g.lineStyle(3, col, 1);
       g.lineBetween(cx - 9, y - 9, cx + 9, y + 9);
@@ -153,5 +165,3 @@ export default class Eraser {
     }
   }
 }
-
-

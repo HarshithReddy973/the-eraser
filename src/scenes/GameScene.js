@@ -6,7 +6,7 @@ import { sketchRect, wobbleLine, rng } from '../art/sketch.js';
 import Player from '../entities/Player.js';
 import Stability from '../systems/Stability.js';
 import Eraser from '../systems/Eraser.js';
-import { createHud, showPanel, showHowTo } from '../ui/ui.js';
+import { createHud, showPanel, showHowTo, toast } from '../ui/ui.js';
 import Run from '../systems/Run.js';
 import { sfx } from '../audio/sfx.js';
 
@@ -23,6 +23,8 @@ export default class GameScene extends Phaser.Scene {
     this.panel = null;
     this.shakeAt = 0;
     this.deaths = 0;
+    this.lastDanger = 0;
+    this.beatAt = 0;
     this.pausedTotal = 0; // ms spent paused (excluded from the level timer)
     this.pauseStart = 0;
     this.howto = null;
@@ -57,14 +59,29 @@ export default class GameScene extends Phaser.Scene {
       lifespan: { min: 600, max: 1000 }, scale: { start: 1, end: 2.4 }, alpha: { start: 0.55, end: 0 },
       tint: 0xcbb98f, emitting: false,
     }).setDepth(39);
+    this.confettiFx = this.add.particles(0, 0, 'ink-dot', {
+      speed: { min: 80, max: 260 }, angle: { min: 200, max: 340 }, gravityY: 420,
+      lifespan: { min: 700, max: 1300 }, scale: { start: 1.3, end: 0.4 }, alpha: { start: 1, end: 0 },
+      tint: [0xd8262f, 0x1d1d24, 0xc9731d, 0x5b6070, 0xf6c244], emitting: false,
+    }).setDepth(45);
 
     this.eraser = new Eraser(this);
     this.registerErasables();
 
     this.hud = createHud(this, this.level, { onRestart: () => this.restart(), onPause: () => this.togglePause() });
     this.vignette = this.add.image(0, 0, 'vignette').setOrigin(0).setDepth(50).setAlpha(0);
+    this.cracks = this.add.image(0, 0, 'cracks').setOrigin(0).setDepth(49).setAlpha(0);
+
+    // level intro: fade in from paper + a handwritten title card
+    this.cameras.main.setRotation(0);
+    this.cameras.main.fadeIn(350, 244, 236, 216);
+    const card = this.add.text(GAME_W / 2, GAME_H / 2 - 50, this.level.name, {
+      fontFamily: FONT, fontSize: '46px', fontStyle: 'bold', color: '#1d1d24',
+    }).setOrigin(0.5).setDepth(70).setAlpha(0).setAngle(-1.5);
+    this.tweens.add({ targets: card, alpha: 0.9, yoyo: true, hold: 1000, duration: 380, onComplete: () => card.destroy() });
 
     this.input.keyboard.on('keydown-R', () => this.restart());
+    this.input.keyboard.on('keydown-M', () => toast(this, sfx.toggleMute() ? 'Sound off' : 'Sound on'));
     this.input.keyboard.on('keydown-ESC', () => (this.howto ? this.closeHowTo() : this.togglePause()));
     this.input.keyboard.on('keydown', () => sfx.unlock());
     // testing shortcut: press 1 / 2 / ... to jump straight to that level
@@ -140,6 +157,8 @@ export default class GameScene extends Phaser.Scene {
           g.lineTo(x1 - 1, 17);
           g.closePath();
           g.fillPath();
+          g.fillStyle(COLORS.red, 1); // red danger tip
+          g.fillTriangle(xm, 2, xm - 3.6, 9, xm + 3.6, 9);
           g.lineStyle(2.4, COLORS.ink, 1);
           wobbleLine(g, x0 + 1, 17, xm, 2, r, 0.6);
           wobbleLine(g, xm, 2, x1 - 1, 17, r, 0.6);
@@ -156,7 +175,7 @@ export default class GameScene extends Phaser.Scene {
     this.door = this.add.image(ex.x, ex.y, 'door').setOrigin(0.5, 1).setDepth(3);
     this.exitRect = new Phaser.Geom.Rectangle(ex.x - 18, ex.y - 56, 36, 56);
     this.exitOpen = !ex.locked;
-    if (!this.exitOpen) this.door.setTint(0x8f8f9c); // greyed out while locked
+    if (!this.exitOpen) this.door.setTexture('door-locked'); // greyed out with a padlock
 
     (L.hints ?? []).forEach((h) => {
       this.add.text(h.x, h.y, h.text, { fontFamily: FONT, fontSize: '20px', color: h.color, align: 'center' })
@@ -183,6 +202,7 @@ export default class GameScene extends Phaser.Scene {
     this.state = 'won';
     this.physics.pause();
     sfx.win();
+    this.confettiFx.emitParticleAt(this.door.x, this.door.y - 40, 70);
     const secs = ((this.time.now - this.t0 - this.pausedTotal) / 1000).toFixed(1);
     const left = Math.ceil(this.stability.value);
     const hasNext = this.levelIndex + 1 < LEVELS.length;
@@ -282,6 +302,18 @@ export default class GameScene extends Phaser.Scene {
 
     this.updateSwitches();
 
+    // boxes: dust, shake and a thump when one lands hard
+    for (const bx of this.boxGroup.getChildren()) {
+      const pv = bx.getData('pvy') ?? 0;
+      const vy = bx.body.velocity.y;
+      if (pv > 260 && vy < pv - 200) {
+        this.dustFx.emitParticleAt(bx.x, bx.body.bottom - 2, 10);
+        this.cameras.main.shake(100, 0.004);
+        sfx.thud();
+      }
+      bx.setData('pvy', vy);
+    }
+
     const b = s.body;
     const hit = this.exitOpen && b.x < this.exitRect.right && b.right > this.exitRect.x && b.y < this.exitRect.bottom && b.bottom > this.exitRect.y;
     if (hit) this.levelComplete();
@@ -307,20 +339,35 @@ export default class GameScene extends Phaser.Scene {
     }
     if (all !== this.exitOpen) {
       this.exitOpen = all;
-      if (all) this.door.clearTint();
-      else this.door.setTint(0x8f8f9c);
+      this.door.setTexture(all ? 'door' : 'door-locked');
       this.tweens.add({ targets: this.door, scaleX: 1.12, scaleY: 1.06, yoyo: true, duration: 120 });
+      if (all) {
+        this.confettiFx.emitParticleAt(this.door.x, this.door.y - 40, 24);
+        sfx.open();
+      }
     }
   }
 
-  // Low stability: red vignette that pulses, plus occasional camera shake.
+  // Low stability gets progressively scarier: red vignette, cracks creeping in from the page edges,
+  // shaking, a slow camera wobble ("the paper is warping") and a heartbeat thump.
   updateWarnings(time) {
-    const d = this.stability.danger;
+    const d = this.stability.danger, ratio = this.stability.ratio, cam = this.cameras.main;
     const target = d === 0 ? 0 : d === 1 ? 0.28 : 0.6 + 0.15 * Math.sin(time / 150);
     this.vignette.setAlpha(this.vignette.alpha + (target - this.vignette.alpha) * 0.08);
-    if (this.state === 'playing' && d > 0 && time > this.shakeAt) {
-      this.cameras.main.shake(130, d === 1 ? 0.0018 : 0.0036);
+    this.cracks.setAlpha(Math.max(0, (0.45 - ratio) / 0.45) * 0.85);
+
+    if (this.state !== 'playing') return;
+    if (d > this.lastDanger) sfx.warn(d);
+    this.lastDanger = d;
+    if (d > 0 && time > this.shakeAt) {
+      cam.shake(130, d === 1 ? 0.0018 : 0.0036);
       this.shakeAt = time + (d === 1 ? 2200 : 1100);
+    }
+    if (d === 2) {
+      cam.setRotation(Math.sin(time / 230) * 0.004);
+      if (time > this.beatAt) { sfx.beat(); this.beatAt = time + 900; }
+    } else {
+      cam.setRotation(cam.rotation * 0.9);
     }
   }
 }

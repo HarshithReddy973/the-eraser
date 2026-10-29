@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_W, GAME_H, COLORS, FONT } from '../config.js';
 import { ensureTextures } from '../art/textures.js';
 import { wobbleLine, rng } from '../art/sketch.js';
-import { createButton, showHowTo, css } from '../ui/ui.js';
+import { createButton, showHowTo, toast, css } from '../ui/ui.js';
 import { sfx } from '../audio/sfx.js';
 import Run from '../systems/Run.js';
 
@@ -40,6 +40,7 @@ export default class MenuScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-ENTER', () => !this.howto && this.play());
     this.input.keyboard.on('keydown-SPACE', () => !this.howto && this.play());
     this.input.keyboard.on('keydown-ESC', () => this.howto && this.closeHowTo());
+    this.input.keyboard.on('keydown-M', () => toast(this, sfx.toggleMute() ? 'Sound off' : 'Sound on'));
     this.input.on('pointerdown', () => sfx.unlock());
   }
 
