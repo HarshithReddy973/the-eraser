@@ -23,3 +23,4 @@ export default class Stability {
     return r > 0.6 ? 0 : r > 0.3 ? 1 : 2;
   }
 }
+
