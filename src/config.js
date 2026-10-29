@@ -32,30 +32,6 @@ export const ERASER = {
   reach: 340, // max distance from the doodle that you can erase
 };
 
-harshiht 
-harshiht
-
-ahdoawhnda
-
-adhauwdhan
-
-ahduawdhadw
-
-adhiadwhawd
-hdiadjaw
-ahdiakwd
-awhdoiawjda
-
-
-harshith 
-reddy harshith
-
-harshith 
-
-djadiajdk
-awdawdiohajd
-adjapidjakd
-aDkjaidkkadw
 
 
 
