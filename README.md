@@ -6,7 +6,7 @@
 
 Every erasure consumes **Ink Stability**. If it reaches zero, the page falls apart. You need to think carefully about what to erase instead of removing everything in sight.
 
-## Play
+# PLAY
 
 Playable Link : **[Play THE ERASER](https://harshithreddy973.github.io/the-eraser/)**
 
