@@ -28,6 +28,16 @@ export function wobbleLine(g, x1, y1, x2, y2, rand, jitter = 1.2) {
   g.strokePath();
 }
 
+/** Dashed wobbly line — used for pencil (erasable) shapes. */
+function dashedLine(g, x1, y1, x2, y2, rand, jitter) {
+  const len = Math.hypot(x2 - x1, y2 - y1) || 1;
+  const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+  for (let d = 0; d < len; d += 17) {
+    const e = Math.min(len, d + 11);
+    wobbleLine(g, x1 + ux * d, y1 + uy * d, x1 + ux * e, y1 + uy * e, rand, jitter * 0.7);
+  }
+}
+
 function poly(g, pts, close, fill) {
   g.beginPath();
   pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
@@ -64,7 +74,7 @@ export function wobbleCircle(g, cx, cy, r, rand, { fill = null, ink = COLORS.ink
  * A sketched rectangle: paper fill, light hatching, double-stroked wobbly outline.
  * The outline sits ~1.5px inside the box so the physics body matches what you see.
  */
-export function sketchRect(g, x, y, w, h, { seed = 1, fill = COLORS.paper, ink = COLORS.ink, width = 3, hatch = true, hatchColor = 0x6b6558, hatchAlpha = 0.3, hatchGap = 11, jitter = 1 } = {}) {
+export function sketchRect(g, x, y, w, h, { seed = 1, fill = COLORS.paper, ink = COLORS.ink, width = 3, hatch = true, hatchColor = 0x6b6558, hatchAlpha = 0.3, hatchGap = 11, jitter = 1, dashed = false } = {}) {
   const rand = rng(seed);
   g.fillStyle(fill, 1);
   g.fillRect(x, y, w, h);
@@ -80,14 +90,15 @@ export function sketchRect(g, x, y, w, h, { seed = 1, fill = COLORS.paper, ink =
     }
   }
 
+  const edge = dashed ? dashedLine : wobbleLine;
   const i = 1.5;
   const l = x + i, r = x + w - i, t = y + i, b = y + h - i;
   for (let pass = 0; pass < 2; pass++) {
     g.lineStyle(pass ? width * 0.5 : width, ink, pass ? 0.65 : 1);
     const o = pass ? 1.2 : 0; // second pass overshoots a little, like a real sketch
-    wobbleLine(g, l - o, t, r + o, t, rand, jitter);
-    wobbleLine(g, r, t - o, r, b + o, rand, jitter);
-    wobbleLine(g, r + o, b, l - o, b, rand, jitter);
-    wobbleLine(g, l, b + o, l, t - o, rand, jitter);
+    edge(g, l - o, t, r + o, t, rand, jitter);
+    edge(g, r, t - o, r, b + o, rand, jitter);
+    edge(g, r + o, b, l - o, b, rand, jitter);
+    edge(g, l, b + o, l, t - o, rand, jitter);
   }
 }

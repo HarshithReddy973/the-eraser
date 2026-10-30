@@ -6,9 +6,9 @@ import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import FinalScene from './scenes/FinalScene.js';
 
-const start = () =>
-  new Phaser.Game({
-    type: Phaser.AUTO,
+const start = () => {
+  const game = new Phaser.Game({
+    type: new URLSearchParams(location.search).has('canvas') ? Phaser.CANVAS : Phaser.AUTO, // ?canvas forces the 2D canvas renderer
     parent: 'game',
     width: GAME_W,
     height: GAME_H,
@@ -20,6 +20,9 @@ const start = () =>
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     scene: [MenuScene, GameScene, FinalScene], // boots into the title screen
   });
+  // Dev mode (?dev): expose the game for debugging/automated tests and enable level shortcuts.
+  if (new URLSearchParams(location.search).has('dev')) window.__game = game;
+};
 
 // Phaser bakes text into canvas textures, so wait for the handwriting font first
 // (with a timeout so a font problem can never block the game).

@@ -44,9 +44,10 @@ export function createHud(scene, level, { onRestart, onPause }) {
   const pause = createButton(scene, 742, HUD_H / 2, 'Pause (Esc)', onPause, { w: 138, h: 34, size: 18, depth: D + 2 });
   const restart = createButton(scene, 884, HUD_H / 2, 'Restart (R)', onRestart, { w: 130, h: 34, size: 18, depth: D + 2 });
 
-  scene.add.text(GAME_W / 2, GAME_H - 14, 'A/D move  ·  Space jump  ·  hold left mouse & drag to erase  ·  R restart  ·  Esc pause  ·  M mute', {
-    fontFamily: FONT, fontSize: '15px', color: '#5b6070',
-  }).setOrigin(0.5).setDepth(D);
+  const hint = 'A/D move  ·  Space jump  ·  hold left mouse & drag to erase  ·  R restart' + (level.boxes?.length ? '  ·  B reset box' : '') + '  ·  Esc pause  ·  M mute';
+  scene.add.text(GAME_W / 2, GAME_H - 6, hint, {
+    fontFamily: FONT, fontSize: '15px', color: '#3d3d46', backgroundColor: '#f4ecd8', padding: { x: 10, y: 2 },
+  }).setOrigin(0.5, 1).setDepth(D);
 
   return {
     update(stability, time) {
@@ -85,7 +86,7 @@ export function showPanel(scene, { title, subtitle = '', buttons, titleColor = C
     .setOrigin(0.5).setDepth(D + 2);
   const parts = [g, ttl];
   if (subtitle) {
-    parts.push(scene.add.text(GAME_W / 2, top + 120, subtitle, { fontFamily: FONT, fontSize: '20px', color: '#3d3d46', align: 'center' })
+    parts.push(scene.add.text(GAME_W / 2, top + 128, subtitle, { fontFamily: FONT, fontSize: '20px', color: '#3d3d46', align: 'center', lineSpacing: 2 })
       .setOrigin(0.5).setDepth(D + 2));
   }
 
@@ -104,7 +105,7 @@ export function showPanel(scene, { title, subtitle = '', buttons, titleColor = C
 /** How to Play screen. onClose is called by the "Got it" button. */
 export function showHowTo(scene, { onClose }) {
   const D = 110;
-  const W = 640, H = 470, top = (GAME_H - H) / 2, left = GAME_W / 2 - W / 2;
+  const W = 640, H = 500, top = (GAME_H - H) / 2, left = GAME_W / 2 - W / 2;
   const dim = scene.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x20180a, 0.45).setDepth(D).setInteractive();
   const g = scene.add.graphics().setDepth(D + 1);
   sketchRect(g, left, top, W, H, { seed: 8, hatch: false, width: 3.5 });
@@ -118,6 +119,7 @@ export function showHowTo(scene, { onClose }) {
     ['Space / W / ↑', 'jump'],
     ['Hold left mouse + drag', 'erase pencil'],
     ['R', 'restart the level'],
+    ['B', 'put a stuck box back'],
     ['Esc', 'pause / resume'],
   ];
   rows.forEach(([key, what], i) => {
@@ -128,7 +130,7 @@ export function showHowTo(scene, { onClose }) {
 
   const divider = scene.add.graphics().setDepth(D + 2);
   divider.lineStyle(2, COLORS.pencil, 0.6);
-  wobbleLine(divider, left + 40, top + 274, left + W - 40, top + 274, rng(2), 1);
+  wobbleLine(divider, left + 40, top + 306, left + W - 40, top + 306, rng(2), 1);
   parts.push(divider);
 
   const rules = [
@@ -137,7 +139,7 @@ export function showHowTo(scene, { onClose }) {
     'Erase a support and whatever rests on it will fall.',
     'A box on the plate unlocks the door. Spikes send you back.',
   ];
-  parts.push(scene.add.text(GAME_W / 2, top + 292, rules.join('\n'), {
+  parts.push(scene.add.text(GAME_W / 2, top + 322, rules.join('\n'), {
     fontFamily: FONT, fontSize: '18px', color: '#3d3d46', align: 'center', lineSpacing: 7,
   }).setOrigin(0.5, 0).setDepth(D + 2));
 

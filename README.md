@@ -17,7 +17,8 @@ Built with **Phaser 3** (Arcade Physics), **Vite** and plain JavaScript. No back
 | 4 | Start screen, pause menu, How to Play, level-complete / final screens | Done |
 | 5 | Art pass: bundled handwriting font, animated doodle, eraser cursor, hazards, cracks | Done |
 | 6 | Juice: particles, low-ink warnings, synthesized sound, mute | Done |
-| 7–8 | Balancing, save data, full playtest, deploy | Planned |
+| 7 | Balancing, soft-lock safety nets, saved bests, auto-pause | Done |
+| 8 | Full playtest in a real browser, bug fixes, deploy workflow | Done |
 
 The game boots into the title screen. Three levels are playable, followed by a final completion screen.
 
@@ -46,9 +47,10 @@ npm run preview    # serve the built dist/ locally
 | Jump | `Space`, `W` or `↑` |
 | Erase | Hold **left mouse button** and drag over pencil objects |
 | Restart level | `R` or the Restart button |
-| Pause / resume | `Esc` or the Pause button |
+| Pause / resume | `Esc` or the Pause button (also pauses automatically when the window loses focus) |
+| Put a stuck box back | `B` (levels with boxes) |
 | Mute / unmute | `M` (remembered between visits) |
-| Jump to level (testing) | `1`, `2`, `3` |
+| Jump to level (testing) | `1`, `2`, `3` — only with `?dev` in the URL |
 
 ---
 
@@ -73,9 +75,13 @@ Below 45% cracks also creep in from the page edges, and below 30% the camera slo
 
 Each level's total erasable cost is deliberately above 100, so you can run out of ink — you must plan, not just erase everything.
 
-**Boxes and plates.** Boxes are pushable physics bodies. A pressure plate is pressed while a box sits on it (the doodle is too light). A `locked` exit stays greyed out until every plate in the level is pressed.
+**Boxes and plates.** Boxes are pushable physics bodies. A pressure plate is pressed while a box sits on it (the doodle is too light). A `locked` exit shows a padlock until every plate is pressed, then it **latches open** — pushing the box off the plate afterwards does not close it again.
 
 **Spikes.** Touching spikes, or falling off the page, sends you back to the spawn point. Anything you erased stays erased until you press `R`.
+
+**Soft-lock safety nets.** `R` restarts the level at any time. `B` puts every box back where it started (it simply falls again if its support is gone), and a box that leaves the page respawns by itself. Pits are always shallower than a jump, so you can climb out of any pit.
+
+**Best results.** After each level the game saves your best time and the most ink stability you had left (a cleaner solve) in `localStorage`, and the level-complete panel shows them with a ★ when you beat a record. If storage is blocked the game works the same, just without saving.
 
 ### Levels
 
@@ -102,6 +108,7 @@ src/
   systems/Eraser.js       Cursor, rubbing, progress, denied feedback, removal
   systems/Stability.js    Ink Stability meter and danger levels
   systems/Run.js          In-memory stats for the current playthrough
+  systems/Save.js         Best time / best ink in localStorage
   ui/ui.js                HUD, sketchy buttons, pause/win/lose panels, How to Play
   art/sketch.js           Wobbly-line helpers (sketchRect, wobbleCircle, ...)
   art/textures.js         Paper, doodle, door, particle and vignette textures
@@ -162,3 +169,36 @@ Everything that affects feel is in `src/config.js`:
 - **Doodle animation:** The physics body is an invisible sprite that is never scaled; a separate visual image follows it and gets squash and stretch, lean, breathing, blinking and dust puffs.
 
 ---
+
+## Known gaps / roadmap
+
+- Possible later: more levels, a level-select screen, a reset-progress button, gamepad or touch support.
+
+---
+
+## Deploying
+
+`npm run build` produces a fully static site in `dist/` (relative asset paths, no server needed).
+
+- **GitHub Pages (automatic):** push this project to a GitHub repo with a `main` branch, then in *Settings → Pages* set **Source: GitHub Actions**. The included workflow `.github/workflows/deploy.yml` builds and publishes on every push to `main`.
+- **Netlify / Vercel:** import the repo; build command `npm run build`, output directory `dist`. Or drag the `dist/` folder onto Netlify Drop.
+- **itch.io:** zip the *contents* of `dist/` (so `index.html` is at the top level), upload as an HTML5 game and set the viewport to 960 × 540.
+
+---
+
+## Dev mode and testing
+
+Add query parameters to the URL (for example `http://localhost:5173/?dev`):
+
+| Parameter | Effect |
+|---|---|
+| `?dev` | Exposes the game as `window.__game` and enables the `1` / `2` / `3` level shortcuts |
+| `?canvas` | Forces the 2D canvas renderer (much faster in software-rendered or headless browsers) |
+
+**How it was tested.** The finished game was played through in a real headless Chromium driven with real keyboard and mouse input: all three levels were beaten from the title screen; pause really freezes the game; running out of ink triggers game over and `R` resets ink, objects and position; the Finish → final screen → menu → play-again loop works; boxes, plates, latched doors, `B`, box respawn, auto-pause, mute and saved bests were each checked; no console errors were logged. Frame-by-frame traces confirmed the Level 3 spike jump clears the spikes with room to spare.
+
+---
+
+## License
+
+Add a license of your choice before publishing.

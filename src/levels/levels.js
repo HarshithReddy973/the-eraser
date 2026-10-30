@@ -60,7 +60,7 @@ export const LEVELS = [
       { x: 330, y: 280, text: 'erase what the box stands on!', angle: -2, color: '#d8262f' },
       { x: 520, y: 400, text: 'the plate needs\nsomething heavy', angle: 2, color: '#5b6070' },
       { x: 860, y: 215, text: 'locked until\nthe plate is pressed', angle: -2, color: '#5b6070' },
-      { x: 150, y: 330, text: 'stuck? press R', angle: -3, color: '#5b6070' },
+      { x: 150, y: 330, text: 'box stuck? press B', angle: -3, color: '#5b6070' },
     ],
   },
   {

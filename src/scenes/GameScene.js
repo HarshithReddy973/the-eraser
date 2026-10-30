@@ -8,6 +8,7 @@ import Stability from '../systems/Stability.js';
 import Eraser from '../systems/Eraser.js';
 import { createHud, showPanel, showHowTo, toast } from '../ui/ui.js';
 import Run from '../systems/Run.js';
+import Save from '../systems/Save.js';
 import { sfx } from '../audio/sfx.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -62,7 +63,7 @@ export default class GameScene extends Phaser.Scene {
     this.confettiFx = this.add.particles(0, 0, 'ink-dot', {
       speed: { min: 80, max: 260 }, angle: { min: 200, max: 340 }, gravityY: 420,
       lifespan: { min: 700, max: 1300 }, scale: { start: 1.3, end: 0.4 }, alpha: { start: 1, end: 0 },
-      tint: [0xd8262f, 0x1d1d24, 0xc9731d, 0x5b6070, 0xf6c244], emitting: false,
+      tint: { onEmit: () => Phaser.Math.RND.pick([0xd8262f, 0x1d1d24, 0xc9731d, 0x5b6070, 0xf6c244]) }, emitting: false,
     }).setDepth(45);
 
     this.eraser = new Eraser(this);
@@ -81,12 +82,20 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: card, alpha: 0.9, yoyo: true, hold: 1000, duration: 380, onComplete: () => card.destroy() });
 
     this.input.keyboard.on('keydown-R', () => this.restart());
+    this.input.keyboard.on('keydown-B', () => this.resetBoxes());
     this.input.keyboard.on('keydown-M', () => toast(this, sfx.toggleMute() ? 'Sound off' : 'Sound on'));
     this.input.keyboard.on('keydown-ESC', () => (this.howto ? this.closeHowTo() : this.togglePause()));
     this.input.keyboard.on('keydown', () => sfx.unlock());
-    // testing shortcut: press 1 / 2 / ... to jump straight to that level
-    LEVELS.forEach((_, i) => this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][i]}`, () => this.scene.restart({ level: i })));
+    // dev shortcut (only with ?dev in the URL): press 1 / 2 / 3 to jump straight to that level
+    if (new URLSearchParams(location.search).has('dev')) {
+      LEVELS.forEach((_, i) => this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][i]}`, () => this.scene.restart({ level: i })));
+    }
     this.t0 = this.time.now;
+
+    // alt-tabbing away pauses the game instead of letting you die offscreen
+    const onBlur = () => { if (this.state === 'playing') this.togglePause(); };
+    this.game.events.on('blur', onBlur);
+    this.events.once('shutdown', () => this.game.events.off('blur', onBlur));
   }
 
   // ---- level construction -------------------------------------------------
@@ -106,9 +115,9 @@ export default class GameScene extends Phaser.Scene {
 
     L.erasables.forEach((e, i) => {
       const key = `eras-${li}-${i}`;
-      // pencil look: lighter lines, denser hatching, so players learn "pencil = erasable"
+      // pencil look: pink eraser-coloured fill and a dashed outline, so players learn "pencil = erasable"
       makeTexture(this, key, e.w, e.h, (g) =>
-        sketchRect(g, 0, 0, e.w, e.h, { seed: 300 + i, ink: 0x4a4f5e, width: 2.4, fill: 0xf1e6c8, hatchColor: 0x4a4f5e, hatchAlpha: 0.38, hatchGap: 8 }));
+        sketchRect(g, 0, 0, e.w, e.h, { seed: 300 + i, ink: 0x5a4650, width: 2.4, fill: 0xf7dfd6, hatchColor: 0xb5685a, hatchAlpha: 0.4, hatchGap: 8, dashed: true }));
       const sprite = this.solids.create(e.x + e.w / 2, e.y + e.h / 2, key).setDepth(6);
       const cost = e.cost ?? Phaser.Math.Clamp(Math.round((e.w * e.h) / 1500), 4, 40);
       this.erasableDefs.push({ id: e.id, sprite, rect: { x: e.x, y: e.y, w: e.w, h: e.h }, cost, eraseTime: e.eraseTime ?? 1 });
@@ -129,6 +138,7 @@ export default class GameScene extends Phaser.Scene {
       box.body.setDragX(1400); // heavy: stops quickly when you stop pushing
       box.body.setMaxVelocity(220, 900);
       box.setCollideWorldBounds(true);
+      box.setData('start', { x: b.x + b.w / 2, y: b.y + b.h / 2 });
     });
 
     // pressure plates (only boxes count — the doodle is too light)
@@ -207,15 +217,38 @@ export default class GameScene extends Phaser.Scene {
     const left = Math.ceil(this.stability.value);
     const hasNext = this.levelIndex + 1 < LEVELS.length;
     Run.record(this.levelIndex, Number(secs), left, this.deaths);
+    const rec = Save.submit(this.levelIndex, Number(secs), left);
+    const star = ' ★';
+    const lines = [
+      `Time ${secs}s  (best ${rec.best.bestTime.toFixed(1)}s)${rec.newTime ? star : ''}`,
+      `Ink left ${left}%  (best ${rec.best.bestInk}%)${rec.newInk ? star : ''}`,
+    ];
+    if (this.deaths) lines.push(`Oops count: ${this.deaths}`);
     const buttons = [{ label: 'Replay', onClick: () => this.restart() }];
     buttons.push(hasNext
       ? { label: 'Next level', primary: true, onClick: () => this.scene.restart({ level: this.levelIndex + 1 }) }
       : { label: 'Finish', primary: true, onClick: () => this.scene.start('Final') });
     this.panel = showPanel(this, {
       title: 'Sketch complete!',
-      subtitle: `Time ${secs}s  ·  Ink left ${left}%` + (this.deaths ? `\nOops count: ${this.deaths}` : ''),
+      subtitle: lines.join('\n'),
       buttons,
     });
+  }
+
+  // Soft-lock insurance: put a box back where it started (it simply falls again if its support is gone).
+  resetBox(bx) {
+    const st = bx.getData('start');
+    this.dustFx.emitParticleAt(bx.x, bx.y, 8);
+    bx.body.reset(st.x, st.y);
+    bx.setData('pvy', 0);
+    this.dustFx.emitParticleAt(st.x, st.y, 8);
+  }
+
+  resetBoxes() {
+    if (this.state !== 'playing' || !this.boxGroup.getLength()) return;
+    this.boxGroup.getChildren().forEach((bx) => this.resetBox(bx));
+    sfx.click();
+    toast(this, 'Box put back');
   }
 
   // ---- pause ----------------------------------------------------------------
@@ -304,6 +337,7 @@ export default class GameScene extends Phaser.Scene {
 
     // boxes: dust, shake and a thump when one lands hard
     for (const bx of this.boxGroup.getChildren()) {
+      if (bx.y > PHYSICS.fallDeathY) this.resetBox(bx); // fell off the page
       const pv = bx.getData('pvy') ?? 0;
       const vy = bx.body.velocity.y;
       if (pv > 260 && vy < pv - 200) {
@@ -337,14 +371,13 @@ export default class GameScene extends Phaser.Scene {
       }
       all = all && pressed;
     }
-    if (all !== this.exitOpen) {
-      this.exitOpen = all;
-      this.door.setTexture(all ? 'door' : 'door-locked');
+    // the door latches: once it has been unlocked it stays open, even if the box is pushed off the plate
+    if (all && !this.exitOpen) {
+      this.exitOpen = true;
+      this.door.setTexture('door');
       this.tweens.add({ targets: this.door, scaleX: 1.12, scaleY: 1.06, yoyo: true, duration: 120 });
-      if (all) {
-        this.confettiFx.emitParticleAt(this.door.x, this.door.y - 40, 24);
-        sfx.open();
-      }
+      this.confettiFx.emitParticleAt(this.door.x, this.door.y - 40, 24);
+      sfx.open();
     }
   }
 

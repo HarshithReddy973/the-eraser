@@ -52,7 +52,7 @@ export default class FinalScene extends Phaser.Scene {
     const dust = this.add.particles(0, 0, 'ink-dot', {
       x: { min: 0, max: GAME_W }, y: -10, speedY: { min: 40, max: 110 }, speedX: { min: -20, max: 20 },
       lifespan: 6000, scale: { start: 1.1, end: 0.8 }, alpha: { start: 0.9, end: 0.2 }, frequency: 120,
-      tint: [COLORS.red, 0x1d1d24, 0xc9731d, 0x5b6070],
+      tint: { onEmit: () => Phaser.Math.RND.pick([COLORS.red, 0x1d1d24, 0xc9731d, 0x5b6070, 0xf6c244]) },
     }).setDepth(-5);
     dust.setActive(true);
   }
