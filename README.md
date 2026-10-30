@@ -8,7 +8,7 @@ Every erasure consumes **Ink Stability**. If it reaches zero, the page falls apa
 
 # PLAY
 
-Playable Link : **[Play THE ERASER](https://harshithreddy973.github.io/the-eraser/)**
+Playable Link : **[Play THE ERASER](https://harshithreddy973.github.io/the-eraser/)** or <https://harshithreddy973.github.io/the-eraser/>
 
 
 ## Features
