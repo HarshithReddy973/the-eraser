@@ -88,7 +88,7 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown', () => sfx.unlock());
     // dev shortcut (only with ?dev in the URL): press 1 / 2 / 3 to jump straight to that level
     if (new URLSearchParams(location.search).has('dev')) {
-      LEVELS.forEach((_, i) => this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'][i]}`, () => this.scene.restart({ level: i })));
+      LEVELS.forEach((_, i) => this.input.keyboard.on(`keydown-${['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'][i]}`, () => this.scene.restart({ level: i })));
     }
     this.t0 = this.time.now;
 

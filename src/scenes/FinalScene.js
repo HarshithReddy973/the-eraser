@@ -29,24 +29,30 @@ export default class FinalScene extends Phaser.Scene {
       this.tweens.add({ targets: d, y: 86, yoyo: true, repeat: -1, duration: 420, ease: 'Sine.Out', delay: i * 210 });
     });
 
-    // stats card
+    // stats card — spacing adapts to however many levels exist
+    const n = LEVELS.length;
+    const rowH = n > 4 ? 26 : 36;
+    const fs = n > 4 ? 18 : 20;
+    const cardTop = 160;
+    const cardH = 72 + n * rowH;
     const g = this.add.graphics();
-    sketchRect(g, GAME_W / 2 - 290, 168, 580, 220, { seed: 12, hatch: false, width: 3.5 });
+    sketchRect(g, GAME_W / 2 - 290, cardTop, 580, cardH, { seed: 12, hatch: false, width: 3.5 });
     let totalSecs = 0, totalOops = 0, played = 0;
     LEVELS.forEach((lv, i) => {
       const r = Run.levels[i];
-      const y = 205 + i * 36;
-      this.add.text(GAME_W / 2 - 262, y, lv.name, { fontFamily: FONT, fontSize: '20px', color: css(COLORS.ink) }).setOrigin(0, 0.5);
+      const y = cardTop + 30 + i * rowH;
+      this.add.text(GAME_W / 2 - 262, y, lv.name, { fontFamily: FONT, fontSize: `${fs}px`, color: css(COLORS.ink) }).setOrigin(0, 0.5);
       const stats = r ? `${r.secs.toFixed(1)}s  ·  ink ${r.ink}%  ·  ${r.deaths} oops` : '—';
-      this.add.text(GAME_W / 2 + 262, y, stats, { fontFamily: FONT, fontSize: '19px', color: '#3d3d46' }).setOrigin(1, 0.5);
+      this.add.text(GAME_W / 2 + 262, y, stats, { fontFamily: FONT, fontSize: `${fs - 1}px`, color: '#3d3d46' }).setOrigin(1, 0.5);
       if (r) { totalSecs += r.secs; totalOops += r.deaths; played++; }
     });
-    this.add.text(GAME_W / 2, 205 + LEVELS.length * 36 + 18, played ? `Total  ${totalSecs.toFixed(1)}s  ·  ${totalOops} oops` : 'Thanks for playing!', {
+    this.add.text(GAME_W / 2, cardTop + 30 + n * rowH + 16, played ? `Total  ${totalSecs.toFixed(1)}s  ·  ${totalOops} oops` : 'Thanks for playing!', {
       fontFamily: FONT, fontSize: '26px', fontStyle: 'bold', color: css(COLORS.red),
     }).setOrigin(0.5);
 
-    createButton(this, GAME_W / 2 - 110, 450, 'Play again', () => { Run.reset(); this.scene.start('Game', { level: 0 }); }, { w: 190, h: 52, size: 24, primary: true });
-    createButton(this, GAME_W / 2 + 110, 450, 'Main menu', () => this.scene.start('Menu'), { w: 190, h: 52, size: 24 });
+    const btnY = cardTop + cardH + 48;
+    createButton(this, GAME_W / 2 - 110, btnY, 'Play again', () => { Run.reset(); this.scene.start('Game', { level: 0 }); }, { w: 190, h: 52, size: 24, primary: true });
+    createButton(this, GAME_W / 2 + 110, btnY, 'Main menu', () => this.scene.start('Menu'), { w: 190, h: 52, size: 24 });
 
     // paper confetti
     const dust = this.add.particles(0, 0, 'ink-dot', {
